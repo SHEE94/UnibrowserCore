@@ -31,3 +31,13 @@ webview.setStyle({height:100,width:100})
 
 ```
 你已成功创建第一个浏览器了。
+
+
+## 联系作者
+
+ 如果想请作者喝杯咖啡可以加作者QQ：549859890
+ 
+ 如果想了解最新开发进度可以加QQ群：326734794
+
+[详细文档地址](https://github.com/SHEE94/UnibrowserCore/wiki)
+[项目地址](https://github.com/SHEE94/UnibrowserCore)
