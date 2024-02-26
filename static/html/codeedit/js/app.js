@@ -76,8 +76,26 @@ var editReady = function() {
 
 
 	// 初始化
-	document.querySelector('#init').addEventListener('click', (e) => {
+	document.querySelector('#init').addEventListener('click', function() {
 		keyEvent('')
+	})
+	
+	document.querySelector('#savedb').addEventListener('click',function(){
+		let codeData = editor.getValue();
+		uni.postMessage({
+			data: {
+				action: 'message',
+				script: codeData
+			}
+		})
+	})
+	document.querySelector('#Cancel').addEventListener('click',function(){
+		
+		uni.postMessage({
+			data: {
+				action: 'Cancel',
+			}
+		})
 	})
 
 

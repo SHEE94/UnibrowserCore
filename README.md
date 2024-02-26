@@ -32,6 +32,9 @@ webview.setStyle({height:100,width:100})
 ```
 你已成功创建第一个浏览器了。
 
+## 完整示例项目
+[dcloud地址](https://ext.dcloud.net.cn/plugin?id=16594)
+[github地址](https://github.com/SHEE94/UnibrowserScript3)
 
 ## 联系作者
 
@@ -39,5 +42,6 @@ webview.setStyle({height:100,width:100})
  
  如果想了解最新开发进度可以加QQ群：326734794
 
+## 文档项目地址
 [详细文档地址](https://github.com/SHEE94/UnibrowserCore/wiki)
 [项目地址](https://github.com/SHEE94/UnibrowserCore)
