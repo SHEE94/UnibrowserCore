@@ -2,7 +2,7 @@
 
 
 try {
-	(function() {
+	;(function() {
 		const startTime = Date.now()
 		cgsdk = function() {
 
@@ -31,7 +31,7 @@ try {
 
 			const storage = plus.storage;
 
-			const _setTimeout = window.setTimeout
+			const _setTimeout = window.setTimeout;
 
 			const Intent = plus.android.importClass("android.content.Intent");
 			const Uri = plus.android.importClass("android.net.Uri");
@@ -83,7 +83,7 @@ try {
 				let urls = []
 				alink.forEach(item => {
 					if (reg.test(item.textContent)) {
-						urls.push(item.href)
+						urls.push(item.href);
 					}
 				})
 				plus.webview.prefetchURLs(urls);

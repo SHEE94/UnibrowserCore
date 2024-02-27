@@ -19,7 +19,8 @@ import {
 	ACTION_TYPR
 } from './tools/types.js'
 import {
-	uuid
+	uuid,
+	encrypt
 } from './tools/tools.js'
 
 import {
@@ -186,7 +187,7 @@ class WebView extends EventEmitter {
 			this.emit(EVENT_TYPE['CREATE-WEBVIEW'], wv)
 			wv.hide()
 			res(wv);
-			
+
 		})
 	}
 
@@ -276,15 +277,28 @@ class WebView extends EventEmitter {
 	}
 
 	setWindowConfig() {
-		let url = arguments[0],
-			component = arguments[1],
+
+		let url = arguments[0] || this.state.data.settingConfig.defaultHome.url;
+
+		if (url.indexOf('ScriptBrowser://web@@') > -1) {
+			let a = url.split('ScriptBrowser://web@@')[1]
+			try {
+				url = encrypt.decrypt(a, 'ScriptBrowser')
+			} catch (e) {
+				//TODO handle the exception
+			}
+		}
+		console.log(url)
+		let component = arguments[1],
 			homePage = {
 				uuid: uuid(32),
-				url: url || this.state.data.settingConfig.defaultHome.url,
+				url: url,
 				parent: component
 			}
 		return homePage;
 	}
+
+
 
 	/**
 	 * @description 创建后台窗口
@@ -676,6 +690,10 @@ class WebView extends EventEmitter {
 
 	}
 
+	// 安装组件
+	componentInstall() {
+
+	}
 }
 
 export {

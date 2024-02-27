@@ -96,47 +96,49 @@ class Setting {
 
 				})
 			}
-			// 获取网页单独设置信息
-			let websiteSettingConfig = this.websiteSettingConfig(activeWebview.getURL());
 
 			let loadingOverri = true;
 			// 开启跳转第三方网址
-			if (this.settingConfig.otherWebsite || websiteSettingConfig.otherWebsite) {
-				const getStrOrigin = (val) => {
-					let text = '';
-					if (val && typeof val === 'string') {
-						const reg = /((https|http|ftp|file):\/\/)([A-Za-z0-9\-.]+)(:[0-9]+){0,1}/g;
-						const arr = val.match(reg);
-						if (arr && arr.length > 0) {
-							text = arr[0];
-						}
+
+			const getStrOrigin = (val) => {
+				let text = '';
+				if (val && typeof val === 'string') {
+					const reg = /((https|http|ftp|file):\/\/)([A-Za-z0-9\-.]+)(:[0-9]+){0,1}/g;
+					const arr = val.match(reg);
+					if (arr && arr.length > 0) {
+						text = arr[0];
 					}
-					return text;
 				}
-				activeWebview.overrideUrlLoading({}, (e) => {
-					if (!loadingOverri) return;
-					loadingOverri = false;
+				return text;
+			}
+			activeWebview.overrideUrlLoading({}, (e) => {
+				if (!loadingOverri) return;
+				loadingOverri = false;
 
-					let url = e.url;
-					if (!this.overrideUrl(this.wv, url)) {
-						return;
-					}
+				let url = e.url;
+				if (!this.overrideUrl(this.wv, url)) {
+					return;
+				}
 
-					let reg = new RegExp('^(http|file|ftp|blob|ws|wss).*', 'g')
-					if (!reg.test(url)) {
-						this.wv.emit('overrideUrlLoading', url);
-						return;
-					}
-					let currentUrl = activeWebview.getURL()
-					let $URL = getStrOrigin(url)
+				let reg = new RegExp('^(http|file|ftp|blob|ws|wss).*', 'g')
+				if (!reg.test(url)) {
+					this.wv.emit('overrideUrlLoading', url);
+					return;
+				}
 
+				let currentUrl = activeWebview.getURL();
+				
+				let $URL = getStrOrigin(url);
+				// 获取网页单独设置信息
+				let websiteSettingConfig = this.websiteSettingConfig(currentUrl);
+				if (this.settingConfig.otherWebsite || websiteSettingConfig.otherWebsite) {
 					if (currentUrl.indexOf($URL) > -1) {
-						overrideUrlLoading()
-						this.wv.loadURL(url)
+						overrideUrlLoading();
+						this.wv.loadURL(url);
 					} else {
 						// 黑名单网址
 						for (let i of blacklist) {
-							let reg = new RegExp(i, 'g')
+							let reg = new RegExp(i, 'g');
 							if (reg.test(url)) {
 								return;
 							}
@@ -175,11 +177,9 @@ class Setting {
 							}
 						})
 					}
-				})
-			} else if (!this.settingConfig.otherWebsite || !websiteSettingConfig.otherWebsite) {
-
-				this.wv.activeWebview.overrideUrlLoading({}, (e) => {
-					let url = e.url;
+				};
+				if (!this.settingConfig.otherWebsite && !websiteSettingConfig.otherWebsite) {
+					
 					if (!this.overrideUrl(this.wv, url)) {
 						return;
 					}
@@ -196,9 +196,11 @@ class Setting {
 					}
 					overrideUrlLoading(true);
 					this.wv.loadURL(url);
-				})
 
-			}
+				}
+			})
+
+
 		}
 
 		if (this.wv.activeWebview) {
@@ -242,20 +244,22 @@ class Setting {
 			let nwv = activeWebview.nativeInstanceObject();
 			if (this.settingConfig.location && uni.getSystemInfoSync().osName == 'android') {
 				plus.android.invoke(nwv, 'setGeolocationEnabled', true);
-			} else if(!this.settingConfig.location && uni.getSystemInfoSync().osName == 'android') {
+			} else if (!this.settingConfig.location && uni.getSystemInfoSync().osName == 'android') {
 				plus.android.invoke(nwv, 'setGeolocationEnabled', false);
 			}
 		})
 	}
 
 	websiteSettingConfig(url) {
-		let websiteSettingConfig = this.wv.state.data.websiteSetting;
-		if(!url){
-			return websiteSettingConfig;
+		const websiteSettingConfig = this.wv.state.data.websiteSetting;
+
+		const defaultWebsiteSetting = this.wv.state.data.defaultWebsiteSetting;
+		if (!url) {
+			return defaultWebsiteSetting;
 		}
 		for (let key in websiteSettingConfig) {
-			if (url.indexOf(key) > -1) {
-				return websiteSettingConfig[key] || websiteSetting;
+			if (key.length > 1 && url.indexOf(key) > -1) {
+				return websiteSettingConfig[key] || defaultWebsiteSetting;
 			}
 		}
 		return websiteSetting;
@@ -476,6 +480,7 @@ class Setting {
 				document.querySelectorAll('header,footer').forEach(function(n){
 					n.style.display = 'initial';
 				});
+				window.readNodes.remove();
 			}
 			`)
 		}
