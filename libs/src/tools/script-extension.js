@@ -18,7 +18,6 @@ import {
 
 let scripts = uni.getStorageSync('scripts') || []
 
-
 function getMatedata(text) {
 
 	const reg = new RegExp('// ==UserScript==');
@@ -94,10 +93,41 @@ function getMatedata(text) {
 	return matedata;
 }
 
-function wrapper(file, url) {
-	console.log(file)
+function GMApiCode(metadata) {
+	return new Promise((resolve, reject) => {
+		plus.io.resolveLocalFileSystemURL('_www/static/sdk/api.js', function(entry) {
+
+			entry.file(function(file) {
+				try {
+					var fileReader = new plus.io.FileReader();
+					fileReader.readAsText(file, 'utf-8');
+					fileReader.onloadend = function(evt) {
+						let result = evt.target.result;
+						let text = result.replace('"%metadata%"', JSON.stringify(metadata))
+						resolve(text)
+					}
+				} catch (e) {
+					//TODO handle the exception
+					console.error(e)
+					reject(e)
+				}
+
+			});
+
+
+		}, function(e) {
+			console.log("Resolve file URL failed: " + e.message);
+		});
+	})
+
+}
+
+async function wrapper(file, url) {
 	const matedata = file.matedata;
-	let code = ''
+	const text = await GMApiCode(matedata)
+	let enApiText = encodeURIComponent(text);
+	let code = '';
+
 	if (!matedata) {
 		let matchs = file.match.split('@@');
 		code = `!(function(){
@@ -105,7 +135,8 @@ function wrapper(file, url) {
 			let matchs = ${JSON.stringify(matchs)};
 			
 			matchs.map(m => {
-				let reg = new RegExp(m.replace('*','.*'), 'i');
+				let res = str.replace(/\\*\/g,'.*');
+				let reg = new RegExp(res, 'g');
 				return reg;
 			}).forEach(match => {
 				
@@ -116,19 +147,30 @@ function wrapper(file, url) {
 			});
 		})()`;
 	} else {
-		code =`!(function() {
+
+		let codeText = file.codeText
+		let enCode = encodeURIComponent(codeText);
+		
+		code = `!(function() {
 			let matedata = ${JSON.stringify(matedata)};
 			if(!matedata.match){
 				matedata.match = [];
 			}
-			let code = \`${file.codeText}\`;
+
 			let namespace = function() {
-				matedata.match.push(matedata.include);
+				matedata.include && matedata.match.push(matedata.include);
+				
 				matedata.match.forEach(function(str) {
-					let reg = new RegExp(str.replace('*','.*'), 'i');
+					
+					let res = str.replace(/\\*\/g,'.*');
+					let reg = new RegExp(res, 'g');
+	
 					if (matedata.name && window[matedata.name]) {return;}
-					if (reg.test(window.location.href|| '${url}')) {
-						let injectCode = new Function(code);
+					if (reg.test('${url}')) {
+						let enApiText = "${enApiText}";
+						
+						let encode = "${enCode}";
+						let injectCode = new Function(decodeURIComponent(enApiText) + decodeURIComponent(encode));
 						injectCode();
 						matedata.name && (window[matedata.name] = true);
 					}
@@ -137,8 +179,8 @@ function wrapper(file, url) {
 			};
 			
 			window[matedata.namespace] = new namespace();
-		})()`
-		console.log(code)
+		})()`;
+
 	}
 	return code;
 }
@@ -149,6 +191,7 @@ function wrapper(file, url) {
  * @param {Object} code 注入的代码字符串
  */
 const injectCodeText = function(codeText, matchs, url) {
+	
 	let code = `!(function(){
 		let code = \`${codeText}\`
 		let matchs = ${JSON.stringify(matchs)}
@@ -169,7 +212,7 @@ const injectCodeText = function(codeText, matchs, url) {
 	return code;
 }
 
-const injectFiles = async (filePath, matchs, url) => {
+const injectFiles = async (filePath, matchs = [], url) => {
 
 	let len = 0
 	let arr = []
@@ -189,15 +232,13 @@ const injectFiles = async (filePath, matchs, url) => {
 						obj.filename = file.name;
 						obj.size = file.size;
 						var fileReader = new plus.io.FileReader();
-
 						fileReader.readAsText(file, 'utf-8');
 						fileReader.onloadend = function(evt) {
 							let result = evt.target.result;
 							obj.codeText = result;
-							let matedata = getMatedata(result)
-
+							let matedata = getMatedata(result);
+							matedata.match = [...matedata.match, ...matchs];
 							obj.matedata = matedata;
-
 							arr.push(obj);
 							len++;
 							resolve(arr)
@@ -220,11 +261,7 @@ const injectFiles = async (filePath, matchs, url) => {
 
 
 	}
-	const list = await pathRecursion(filePath[len]).catch(err => {
-		console.log(err)
-	})
-
-
+	const list = await pathRecursion(filePath[len])
 
 	return list;
 }
@@ -239,23 +276,56 @@ class ScriptExtension {
 			if (!activeWebview) return;
 			activeWebview.addEventListener()
 		})
-
-		this.wv.on(EVENT_TYPE['CREATE-WEBVIEW'], (wv) => {
-			wv.appendJsFile('_www/static/sdk/api.js');
+		
+		// 监听网页信息
+		this.wv.on(EVENT_TYPE['WEB-MESSAGE'], (json) => {
+			if (json.action == 'GM_openInTab') {
+				let data = json.data;
+				this.wv.openNewWindow(data.url);
+			} else if (json.action == 'GM_registerMenuCommand') {
+				// 注册菜单
+				let GM_MENU = this.wv.state.data.GM_MENU;
+				if (!GM_MENU) {
+					GM_MENU = []
+				}
+				let obj = {
+					title: json.data.caption,
+					id: json.data.id
+				}
+				GM_MENU.push(obj)
+				this.wv.state.setData({
+					GM_MENU
+				})
+			} else if (json.action == 'GM_unregisterMenuCommand') {
+				// 取消菜单
+				let GM_MENU = this.wv.state.data.GM_MENU;
+				GM_MENU.forEach((item, index) => {
+					if (item.id == json.data.caption) {
+						GM_MENU.splice(index, 1)
+					}
+				})
+				this.wv.state.setData({
+					GM_MENU
+				})
+			}
 		})
+
 
 		const appendJS = (item, wvitem) => {
 			let matchs = item.match.split('@@');
 			let code = injectCodeText(item.codeText, matchs, wvitem.getURL())
-			injectFiles(item.scriptPath, matchs, wvitem.getURL()).then(jsfile => {
-				
-				jsfile.forEach(matedata => {
-					const code = wrapper(matedata, wvitem.getURL())
-					
-					wvitem.evalJS(code);
-				})
-			})
 
+			injectFiles(item.scriptPath, matchs, wvitem.getURL())
+				.then(jsfile => {
+					jsfile.forEach(matedata => {
+						setTimeout((m) => {
+							wrapper(m, wvitem.getURL()).then(code => {
+								wvitem.evalJS(code);
+							})
+						}, 0, matedata)
+
+					})
+				})
 			wvitem.evalJS(code);
 		}
 
@@ -271,7 +341,6 @@ class ScriptExtension {
 			let $script = wv.state.data.scripts;
 			$script.forEach(item => {
 				if ((item.execution === this.execution.early) && item.enable) {
-					console.log('尽早')
 					appendJS(item, wvitem)
 				}
 			})
@@ -284,7 +353,6 @@ class ScriptExtension {
 			let $script = wv.state.data.scripts;
 			$script.forEach(item => {
 				if ((item.execution === this.execution.loaded) && item.enable) {
-
 					appendJS(item, wvitem)
 				}
 			})

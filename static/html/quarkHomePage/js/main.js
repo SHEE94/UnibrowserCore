@@ -238,7 +238,13 @@ require(['jquery'], function($) {
 				"name": "导航",
 				"url": "https://www.pp93.com/m",
 				"icon": "icon/pp93.png"
-			}],
+			}, 
+			{
+				"name": "greasyfork",
+				"url": "https://greasyfork.org/zh-CN/scripts",
+				"icon": "icon/blacklogo96.png"
+			},
+			],
 		};
 		this.options = $.extend({}, this.options, options);
 		this.init();

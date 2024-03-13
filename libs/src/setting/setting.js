@@ -26,8 +26,7 @@ import {
 import SettingConfig from '../../config/settingConfig.js'
 import websiteSetting from '../../config/websiteSetting.js'
 const settingConfig = JSON.parse(JSON.stringify(SettingConfig))
-const ua =
-	'Mozilla/5.0 (Linux; Android; V1923A Build/N2G47O; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/68.0.3440.70 Mobile Safari/537.36 SCRIPT/3.0';
+const ua = 'Mozilla/5.0 (Linux; Android; V1923A Build/N2G47O; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Mobile Safari/537.36 SCRIPT/3.0';
 
 let _self = null;
 
@@ -50,7 +49,7 @@ class Setting {
 			this.wv.homePage = this._settingConfig.defaultHome
 		}
 
-		this.userAgent = ua;
+		this.userAgent = uni.getStorageSync('UA') || ua;
 
 		this.listenerEvent();
 
@@ -127,7 +126,7 @@ class Setting {
 				}
 
 				let currentUrl = activeWebview.getURL();
-				
+
 				let $URL = getStrOrigin(url);
 				// 获取网页单独设置信息
 				let websiteSettingConfig = this.websiteSettingConfig(currentUrl);
@@ -179,7 +178,7 @@ class Setting {
 					}
 				};
 				if (!this.settingConfig.otherWebsite && !websiteSettingConfig.otherWebsite) {
-					
+
 					if (!this.overrideUrl(this.wv, url)) {
 						return;
 					}
@@ -323,6 +322,7 @@ class Setting {
 	 * @param {String} val
 	 */
 	set userAgent(val) {
+		uni.setStorageSync('UA', val);
 		plus.navigator.setUserAgent(val, false);
 	}
 
@@ -330,7 +330,7 @@ class Setting {
 	 * 获取ua
 	 */
 	get userAgent() {
-		return ua;
+		return uni.getStorageSync('UA') || ua;
 	}
 
 	/**
@@ -355,7 +355,6 @@ class Setting {
 	 * 获取主页信息
 	 */
 	get homePage() {
-
 		return this.settingConfig.defaultHome
 	}
 
@@ -454,7 +453,7 @@ class Setting {
 			(function() {
 				let readNodes = document.createElement('div');
 				var documentClone = document.cloneNode(true);
-				var article = new Readability(document).parse();
+				var article = new Readability(documentClone).parse();
 				
 				var content = article.content
 				readNodes.innerHTML = content;
@@ -530,7 +529,10 @@ class Setting {
 	 */
 	reset() {
 		uni.removeStorageSync('settingConfig');
+		uni.removeStorageSync('UA');
+		
 		this.settingConfig = settingConfig;
+		
 	}
 	/**
 	 * 获取设置配置

@@ -86,7 +86,8 @@ class WebView extends EventEmitter {
 			hardwareAccelerated: true,
 			plusrequire: 'ahead',
 			videoFullscreen: 'landscape-primary',
-			errorPage: '_www/static/html/error/error.html',
+			// errorPage: '_www/static/html/error/error.html',
+			errorPage:'none',
 			progress: {
 				color: '#4580ee',
 				height: '2px'
@@ -254,7 +255,14 @@ class WebView extends EventEmitter {
 	 */
 	loadURL(uniurl) {
 		let url = this.getLocalServeUrl(uniurl)
-		this.checkedActiveWebview().loadURL(url)
+		let active = this.checkedActiveWebview()
+		if (active) {
+			active.loadURL(url)
+		} else {
+			this.state.getData('activeWebview', (activeWebview) => {
+				activeWebview.loadURL(url)
+			})
+		}
 	}
 	/**
 	 * 获取url
@@ -288,7 +296,7 @@ class WebView extends EventEmitter {
 				//TODO handle the exception
 			}
 		}
-		console.log(url)
+
 		let component = arguments[1],
 			homePage = {
 				uuid: uuid(32),
@@ -668,6 +676,7 @@ class WebView extends EventEmitter {
 			})
 		})
 	}
+	
 	/**
 	 * 前进到之前一页
 	 */
