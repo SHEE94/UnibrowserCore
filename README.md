@@ -1,4 +1,4 @@
-![](https://img.shields.io/badge/license-MIT-green)  ![](https://img.shields.io/badge/version-1.0.3-red)
+![](https://img.shields.io/badge/license-MIT-green)  ![](https://img.shields.io/badge/version-1.0.5-red)
 # 快速入门
 
 ## 引入文件
