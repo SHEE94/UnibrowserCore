@@ -79,8 +79,8 @@ var editReady = function() {
 	document.querySelector('#init').addEventListener('click', function() {
 		keyEvent('')
 	})
-	
-	document.querySelector('#savedb').addEventListener('click',function(){
+
+	document.querySelector('#savedb').addEventListener('click', function() {
 		let codeData = editor.getValue();
 		uni.postMessage({
 			data: {
@@ -89,15 +89,14 @@ var editReady = function() {
 			}
 		})
 	})
-	document.querySelector('#Cancel').addEventListener('click',function(){
-		
+	
+	document.querySelector('#Cancel').addEventListener('click', function() {
 		uni.postMessage({
 			data: {
 				action: 'Cancel',
 			}
 		})
 	})
-
 
 	window.save = function() {
 		let codeData = editor.getValue();
@@ -109,9 +108,10 @@ var editReady = function() {
 		})
 		window.localStorage.savestate = codeData;
 	}
-	window.setCode = function(code){
-		console.log(code)
-		editor.setValue(code)
+
+	let $code = [];
+	window.setCode = function(code) {
+		editor.setValue(decodeURIComponent(code))
 	}
 }
 editReady()

@@ -22,13 +22,16 @@ function getMatedata(text) {
 
 	const reg = new RegExp('// ==UserScript==');
 	const reg2 = new RegExp('// ==/UserScript==');
+	
 	let a = text.split(reg)[1];
+	if(!a)return null;
 	let b = a.split(reg2)[0];
 
 	if (!a || !b) {
 		return {}
 	}
 	let matedata = {
+		uuid:uuid(),
 		name: '', //脚本名称
 		icon: '', //脚本icon
 		include: '', //匹配的网址
@@ -129,18 +132,18 @@ async function wrapper(file, url) {
 	let code = '';
 
 	if (!matedata) {
-		let matchs = file.match.split('@@');
+		let matchs = file.match;
 		code = `!(function(){
 			let code = \`${file.codeText}\`;
 			let matchs = ${JSON.stringify(matchs)};
 			
-			matchs.map(m => {
+			matchs.map(function(str) {
 				let res = str.replace(/\\*\/g,'.*');
 				let reg = new RegExp(res, 'g');
 				return reg;
 			}).forEach(match => {
 				
-				if (match.test(window.location.href||'${url}')) {
+				if (match.test('${url}')) {
 					let inject = new Function(code);
 					inject();
 				}
@@ -148,9 +151,19 @@ async function wrapper(file, url) {
 		})()`;
 	} else {
 
-		let codeText = file.codeText
-		let enCode = encodeURIComponent(codeText);
+		let codeText = file.codeText;
 		
+		let nCode = `
+			if(!scriptLoaded){
+				window['scriptLoad_${matedata.uuid}'] = function(){
+					${codeText}
+				}
+			}else{
+				${codeText}
+			}
+		`;
+		let enCode = encodeURIComponent(nCode);
+
 		code = `!(function() {
 			let matedata = ${JSON.stringify(matedata)};
 			if(!matedata.match){
@@ -171,6 +184,7 @@ async function wrapper(file, url) {
 						
 						let encode = "${enCode}";
 						let injectCode = new Function(decodeURIComponent(enApiText) + decodeURIComponent(encode));
+						
 						injectCode();
 						matedata.name && (window[matedata.name] = true);
 					}
@@ -190,24 +204,14 @@ async function wrapper(file, url) {
  * 注入代码
  * @param {Object} code 注入的代码字符串
  */
-const injectCodeText = function(codeText, matchs, url) {
-	
-	let code = `!(function(){
-		let code = \`${codeText}\`
-		let matchs = ${JSON.stringify(matchs)}
-		
-		matchs.map(m => {
-			let reg = new RegExp(m.replace('*','.*'), 'i')
-			return reg;
-		}).forEach(match => {
-			
-			if (match.test(window.Location.href||'${url}')) {
-				let inject = new Function(code)
-				inject()
-			}
-		})
-	})()`;
-
+const injectCodeText = async function(codeText, matchs, url) {
+	let matedata = getMatedata(codeText);
+	let code = '';
+	if(matedata){
+		code = await wrapper({matedata,codeText,match:matchs},url)
+	}else{
+		code = await wrapper({codeText,match:matchs},url)
+	}
 
 	return code;
 }
@@ -219,12 +223,11 @@ const injectFiles = async (filePath, matchs = [], url) => {
 	const pathRecursion = (file) => {
 		return new Promise((resolve, reject) => {
 			plus.io.resolveLocalFileSystemURL(file.path, function(entry) {
-				// 可通过entry对象操作test.html文件 
+				
 				let obj = {
 					codeText: '',
 					filename: '',
 					size: 0,
-					matedata: {}
 				}
 
 				entry.file(function(file) {
@@ -237,8 +240,10 @@ const injectFiles = async (filePath, matchs = [], url) => {
 							let result = evt.target.result;
 							obj.codeText = result;
 							let matedata = getMatedata(result);
-							matedata.match = [...matedata.match, ...matchs];
-							obj.matedata = matedata;
+							if(matedata){
+								matedata.match = [...matedata.match, ...matchs];
+								obj.matedata = matedata;
+							}
 							arr.push(obj);
 							len++;
 							resolve(arr)
@@ -276,7 +281,7 @@ class ScriptExtension {
 			if (!activeWebview) return;
 			activeWebview.addEventListener()
 		})
-		
+
 		// 监听网页信息
 		this.wv.on(EVENT_TYPE['WEB-MESSAGE'], (json) => {
 			if (json.action == 'GM_openInTab') {
@@ -313,7 +318,10 @@ class ScriptExtension {
 
 		const appendJS = (item, wvitem) => {
 			let matchs = item.match.split('@@');
-			let code = injectCodeText(item.codeText, matchs, wvitem.getURL())
+			injectCodeText(item.codeText, matchs, wvitem.getURL())
+			.then(code=>{
+				wvitem.evalJS(code);
+			})
 
 			injectFiles(item.scriptPath, matchs, wvitem.getURL())
 				.then(jsfile => {
@@ -326,7 +334,7 @@ class ScriptExtension {
 
 					})
 				})
-			wvitem.evalJS(code);
+			
 		}
 
 		this.wv.on(EVENT_TYPE['rendering'], wvitem => {
@@ -365,7 +373,14 @@ class ScriptExtension {
 			})
 		})
 	}
-
+	/**
+	 * 单机扩展按钮
+	 * @param {Object} item
+	 */
+	clickExtensionMenu(item) {
+		if (!item.id) return;
+		this.wv.activeWebview.evalJS(`window['gm_menu_${item.id}'](${JSON.stringify(item)})`)
+	}
 	/**
 	 * 脚本加载时机
 	 * @type {enum}

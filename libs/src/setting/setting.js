@@ -26,7 +26,8 @@ import {
 import SettingConfig from '../../config/settingConfig.js'
 import websiteSetting from '../../config/websiteSetting.js'
 const settingConfig = JSON.parse(JSON.stringify(SettingConfig))
-const ua = 'Mozilla/5.0 (Linux; Android; V1923A Build/N2G47O; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Mobile Safari/537.36 SCRIPT/3.0';
+const ua =
+	'Mozilla/5.0 (Linux; Android; V1923A Build/N2G47O; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/91.0.4472.114 Mobile Safari/537.36 SCRIPT/3.0';
 
 let _self = null;
 
@@ -290,7 +291,11 @@ class Setting {
 				data: lastWebviews
 			})
 		}
-		this.wv.on(EVENT_TYPE['CLOSE-WINDOW'], setList)
+		this.wv.on(EVENT_TYPE['CLOSE-WINDOW'], () => {
+			uni.removeStorage({
+				key: 'lastWebviews'
+			})
+		})
 		this.wv.on(EVENT_TYPE['CLOSE-WINDOW-ALL'], () => {
 			uni.removeStorage({
 				key: 'lastWebviews'
@@ -530,9 +535,9 @@ class Setting {
 	reset() {
 		uni.removeStorageSync('settingConfig');
 		uni.removeStorageSync('UA');
-		
+
 		this.settingConfig = settingConfig;
-		
+
 	}
 	/**
 	 * 获取设置配置

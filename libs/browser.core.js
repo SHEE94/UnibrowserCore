@@ -86,8 +86,8 @@ class WebView extends EventEmitter {
 			hardwareAccelerated: true,
 			plusrequire: 'ahead',
 			videoFullscreen: 'landscape-primary',
-			// errorPage: '_www/static/html/error/error.html',
-			errorPage:'none',
+			errorPage: '_www/static/html/error/error01.html',
+			// errorPage:'none',
 			progress: {
 				color: '#4580ee',
 				height: '2px'

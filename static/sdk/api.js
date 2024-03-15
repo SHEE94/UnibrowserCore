@@ -21,10 +21,18 @@ function uuid() {
 
 
 function require(src) {
-	let s = document.createElement('script')
+	return new Promise(function(res, reje) {
+		let s = document.createElement('script')
+		s.onload = function() {
+			res(true)
+		}
+		s.onerror = function() {
+			reje('err')
+		}
+		s.src = src;
+		document.body.appendChild(s)
+	})
 
-	s.src = src;
-	document.body.appendChild(s)
 }
 
 let downloadType = {
@@ -33,11 +41,27 @@ let downloadType = {
 	script: 2
 }
 
+let scriptLoaded = false;
 
 if (metadata.require && metadata.require.length) {
+	let len = metadata.require.length;
+	let current = 0;
 	metadata.require.forEach(function(src) {
 		require(src)
+		.then(function() {
+			current++;
+			if (current >= len) {
+				scriptLoaded = true;
+				window['scriptLoad_' + metadata.uuid]()
+			}
+		})
+		.catch(function() {
+			current++;
+		})
 	})
+}
+if (!metadata.require.length) {
+	scriptLoaded = true;
 }
 
 
@@ -71,7 +95,7 @@ const namespaceStorage = function() {
 };
 
 const GM_info = {
-	uuid: "%uuid%",
+	uuid: metadata.uuid,
 	script: {
 		author: metadata.author,
 		name: metadata.name,
@@ -120,6 +144,17 @@ const GM_getResourceText = function(name) {
 	})
 }
 
+const GM_setClipboard = window.GM_setClipboard = function(text) {
+	return navigator.clipboard.writeText(text)
+		.then(() => {
+			console.log('Text successfully copied to clipboard!');
+		})
+		.catch(err => {
+			console.error('Failed to copy text: ', err);
+		});
+}
+
+
 const GM_getResourceURL = function(name) {
 	let resource = metadata.resource;
 	for (let i = 0; i < resource.length; i++) {
@@ -143,7 +178,7 @@ const GM_setValue = window.GM_setValue = function(key, defaultValue) {
 const GM_getValue = window.GM_getValue = function(key) {
 	let namespaceArr = namespaceStorage() || [];
 	let resArr = namespaceArr.find(item => item.key == key);
-	if(!resArr){
+	if (!resArr) {
 		return null;
 	}
 	return resArr.data;
@@ -232,7 +267,7 @@ const GM_unregisterMenuCommand = window.GM_unregisterMenuCommand = function(capt
 };
 
 const GM_xmlhttpRequest = window.GM_xmlhttpRequest = function(details) {
-	
+
 	let xhr = new plus.net.XMLHttpRequest();
 	details.onreadystatechange = xhr.onreadystatechange;
 	details.onabort = xhr.onabort;

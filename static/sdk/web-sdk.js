@@ -35,10 +35,16 @@ try {
 
 			const _setTimeout = window.setTimeout;
 
-			const Intent = plus.android.importClass("android.content.Intent");
-			const Uri = plus.android.importClass("android.net.Uri");
-			const main = plus.android.runtimeMainActivity();
-
+			let Intent = null;
+			let Uri = null;
+			let main = null;
+			try {
+				Intent = plus.android.importClass("android.content.Intent");
+				Uri = plus.android.importClass("android.net.Uri");
+				main = plus.android.runtimeMainActivity();
+			} catch (e) {
+				//TODO handle the exception
+			}
 
 			const webSDK = {
 				current: webview,
@@ -75,21 +81,6 @@ try {
 			};
 
 
-
-			// 预加载链接
-			window.addEventListener('DOMContentLoaded', function() {
-				let alink = document.querySelectorAll('a');
-				let reg = new RegExp(/(上|下).*(页|章)|[0-9]/, 'i')
-				let urls = []
-				alink.forEach(item => {
-					if (reg.test(item.textContent)) {
-						urls.push(item.href);
-					}
-				})
-				plus.webview.prefetchURLs(urls);
-			})
-
-
 			let touchX = 0;
 			let touchY = 0;
 
@@ -110,6 +101,9 @@ try {
 			if (websiteSettingData[host]) {
 				setting = Object.assign(setting, {}, websiteSettingData[host])
 			}
+
+
+		
 
 
 			// 监听下载
@@ -187,22 +181,25 @@ try {
 						that.Data.location++;
 						that.send();
 						if (!setting.location) return;
-						return _getCurrentPosition.apply(this, arguments);
+						if(confirm('网页正在请求定位接口，是否允许？\n The page is requesting a location interface!')){
+							return _getCurrentPosition.apply(this,arguments)
+						}
 					}
 
 					const dev = function() {
 						that.Data.speed = Date.now() - startTime;
-						let mate = `<meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content: https://xxx.com;media-src * blob: 'self' http://* 'unsafe-inline' 'unsafe-eval';style-src * 'self' 'unsafe-inline';img-src * 'self' data: content:;connect-src * blob:;">`;
-						
+						let mate =
+							`<meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content: https://xxx.com;media-src * blob: 'self' http://* 'unsafe-inline' 'unsafe-eval';style-src * 'self' 'unsafe-inline';img-src * 'self' data: content:;connect-src * blob:;">`;
+
 						let d = document.createElement('div')
 						d.innerHTML = mate;
-						
+
 						let mateNode = d.lastChild;
-						
+
 						document.head.appendChild(mateNode);
-						
+
 						window.DOMContentLoadedStatus = true;
-						
+
 						let src = "//cdn.jsdelivr.net/npm/eruda";
 						if (location.protocol.indexOf('http') == -1) {
 							src = 'http:' + src;
@@ -214,7 +211,7 @@ try {
 								script.src = src;
 								document.body.appendChild(script);
 								script.onload = function() {
-									if(!eruda)return;
+									if (!eruda) return;
 									eruda.init();
 								}
 
@@ -365,7 +362,12 @@ try {
 				}
 				let uri = Uri.parse(this.src);
 				intent.setDataAndType(uri, "video/*");
-				main.startActivity(intent);
+				if (main) {
+					main.startActivity(intent);
+				} else {
+					plus.runtime.openURL(this.src)
+				}
+
 				this.playSysPlayState = false;
 			}
 			webSDK.openSystemPlayer = openSysVideo
@@ -456,7 +458,7 @@ try {
 			if (!setting.timer) {
 				timer()
 			}
-			
+
 
 			const _appendChild = HTMLElement.prototype.appendChild
 
@@ -467,13 +469,7 @@ try {
 				let tagname = node.tagName || node.nodeName
 				if (!setting.nonstandardTag) {
 					if (typeof tagname == 'undefined' || !nodelist.includes(tagname.toLocaleLowerCase())) {
-
 						return null;
-					}
-					
-					if(tagname.toLocaleLowerCase() == 'video'){
-						console.log(tagname)
-						replaceVideo(node)
 					}
 					// if (tagname.toLocaleLowerCase() == 'video') {
 					// 	node.setAttribute('controls', 'controls')
@@ -696,6 +692,7 @@ try {
 					eleText;
 
 				eles.forEach(function(ele) {
+					if (!ele) return;
 					tagName = ele.tagName
 					if (ele.src) {
 						eleSrc = encodeURIComponent(ele.src)
@@ -703,7 +700,9 @@ try {
 					if (ele.href) {
 						eleHref = encodeURIComponent(ele.href)
 					}
-					eleClassName = ele.className
+					if (ele && ele.className) {
+						eleClassName = ele.className
+					}
 					eleText = ele.textContent;
 				})
 
@@ -757,5 +756,5 @@ try {
 } catch (e) {
 	//TODO handle the exception
 	console.log('SDK load fail')
-	console.warn(e)
+	console.warn(JSON.stringify(e.stack))
 }
