@@ -11,6 +11,7 @@ try {
 			console.log('SDK LOADED')
 			window.WEB_SDK_LOADED = true;
 			const version = '3.0.0';
+			const $Runtime = plus.runtime;
 			plus.ad = null;
 			plus.camera = null;
 			plus.share = null;
@@ -29,7 +30,7 @@ try {
 			plus.fingerprint = null;
 			plus.navigator = null;
 
-			const webview = plus.webview.currentWebview();
+			let webview = null;
 
 			const storage = plus.storage;
 
@@ -39,6 +40,7 @@ try {
 			let Uri = null;
 			let main = null;
 			try {
+				webview = plus.webview.currentWebview();
 				Intent = plus.android.importClass("android.content.Intent");
 				Uri = plus.android.importClass("android.net.Uri");
 				main = plus.android.runtimeMainActivity();
@@ -103,31 +105,35 @@ try {
 			}
 
 
-		
 
 
-			// 监听下载
-			let nwv = webview.nativeInstanceObject();
-			if (setting.downloadCurrent != 0 && !setting.autoDownload) {
-				let DownloadListener = plus.android.implements('android.webkit.DownloadListener', {
-					onDownloadStart: function(url) {
-						webSDK.DownloadListener && webSDK.DownloadListener(url)
-						webSDK.sendMessage({
-							action: 'download',
-							url: encodeURIComponent(url)
-						})
-					}
-				});
-				plus.android.invoke(nwv, 'setDownloadListener', DownloadListener);
+			try {
+				// 监听下载
+				let nwv = webview.nativeInstanceObject();
+				if (setting.downloadCurrent != 0 && !setting.autoDownload) {
+					let DownloadListener = plus.android.implements('android.webkit.DownloadListener', {
+						onDownloadStart: function(url) {
+							webSDK.DownloadListener && webSDK.DownloadListener(url)
+							webSDK.sendMessage({
+								action: 'download',
+								url: encodeURIComponent(url)
+							})
+						}
+					});
+					plus.android.invoke(nwv, 'setDownloadListener', DownloadListener);
+				}
+				if (setting.autoDownload) {
+					let DownloadListener = plus.android.implements('android.webkit.DownloadListener', {
+						onDownloadStart: function(url) {
+							return false;
+						}
+					});
+					plus.android.invoke(nwv, 'setDownloadListener', DownloadListener);
+				}
+			} catch (e) {
+				//TODO handle the exception
 			}
-			if (setting.autoDownload) {
-				let DownloadListener = plus.android.implements('android.webkit.DownloadListener', {
-					onDownloadStart: function(url) {
-						return false;
-					}
-				});
-				plus.android.invoke(nwv, 'setDownloadListener', DownloadListener);
-			}
+
 
 
 			class websiteStatistics {
@@ -181,8 +187,9 @@ try {
 						that.Data.location++;
 						that.send();
 						if (!setting.location) return;
-						if(confirm('网页正在请求定位接口，是否允许？\n The page is requesting a location interface!')){
-							return _getCurrentPosition.apply(this,arguments)
+						if (confirm(
+								'网页正在请求定位接口，是否允许？\n The page is requesting a location interface!')) {
+							return _getCurrentPosition.apply(this, arguments)
 						}
 					}
 
@@ -227,7 +234,7 @@ try {
 						})
 						plus.webview.prefetchURLs(urls);
 					}
-
+					dev()
 					// 兼容X5内核
 					if (document.readyState == 'complete') {
 						dev()
@@ -355,17 +362,17 @@ try {
 			 * @param {string} src
 			 */
 			function openSysVideo() {
-				let url = arguments[0]
-				let intent = new Intent(Intent.ACTION_VIEW);
-				if (url) {
-					this.src = url;
-				}
-				let uri = Uri.parse(this.src);
-				intent.setDataAndType(uri, "video/*");
+				let url = arguments[0];
 				if (main) {
+					let intent = new Intent(Intent.ACTION_VIEW);
+					if (url) {
+						this.src = url;
+					}
+					let uri = Uri.parse(this.src);
+					intent.setDataAndType(uri, "video/*");
 					main.startActivity(intent);
 				} else {
-					plus.runtime.openURL(this.src)
+					$Runtime.openURL(this.src)
 				}
 
 				this.playSysPlayState = false;
